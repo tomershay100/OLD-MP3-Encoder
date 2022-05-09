@@ -5,6 +5,7 @@ import sys
 
 import numpy as np
 
+import util
 from tables import Tables
 
 FRAME_SIZE = 512
@@ -40,7 +41,7 @@ class WAVFile:
         self.__num_of_processed_samples = 0
         self.audio = []
         for ch in range(self.__num_of_ch):
-            self.audio.append(CircBuffer(FRAME_SIZE))
+            self.audio.append(util.CircBuffer(FRAME_SIZE))
 
     # Reads the header information to check if it is a valid file with PCM audio samples.
     def __read_header(self):
@@ -162,28 +163,3 @@ class WAVFile:
 
     def get_table(self):
         return self.__table
-
-
-# Circular buffer used for audio input.
-class CircBuffer:
-    def __init__(self, size, datatype='float32'):
-        self.size = size
-        self.pos = 0
-        self.samples = np.zeros(size, dtype=datatype)
-
-    def insert(self, frame):
-        length = len(frame)
-        if self.pos + length <= self.size:
-            self.samples[self.pos:self.pos + length] = frame
-        else:
-            overhead = length - (self.size - self.pos)
-            self.samples[self.pos:self.size] = frame[:-overhead]
-            self.samples[0:overhead] = frame[-overhead:]
-        self.pos += length
-        self.pos %= self.size
-
-    def ordered(self):
-        return np.concatenate((self.samples[self.pos:], self.samples[:self.pos]))
-
-    def reversed(self):
-        return np.concatenate((self.samples[self.pos - 1::-1], self.samples[:self.pos - 1:-1]))
