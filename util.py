@@ -71,3 +71,11 @@ class BitStream:
             data_in_bytes = (data & 0xFF,) + data_in_bytes
             data >>= 8
         return data_in_bytes
+
+
+def get_scale_factors(sbsamples, sftable):
+    return None
+
+
+def bitstream_formatting(wav_file, allocation, scalefactor, sample):
+    return None

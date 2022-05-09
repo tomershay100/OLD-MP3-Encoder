@@ -3,7 +3,9 @@ import math
 import numpy as np
 from scipy import signal
 
+import psychoacoustic as psycho
 import tables
+import util
 
 
 class MP3Encoder:
@@ -37,15 +39,15 @@ class MP3Encoder:
             # Number of bits allocated in subband is either 0 or in range [2,15].
             scfindices = np.zeros((self.__wav_file.get_num_of_ch(), tables.N_SUBBANDS), dtype='uint8')
             subband_bit_allocation = np.zeros((self.__wav_file.get_num_of_ch(), tables.N_SUBBANDS), dtype='uint8')
-            smr = np.zeros((self.__wav_file.get_num_of_ch(), tables.N_SUBBANDS), dtype='float32')
+            # smr = np.zeros((self.__wav_file.get_num_of_ch(), tables.N_SUBBANDS), dtype='float32') # NOT USED
 
             # Finding scale factors, psychoacoustic model and bit allocation calculation for subbands. Although
             # scaling is done later, its result is necessary for the psychoacoustic model and calculation of
             # sound pressure levels.
             for ch in range(self.__wav_file.get_num_of_ch()):
-                # scfindices[ch, :] = get_scalefactors(subband_samples[ch, :, :], params.table.scalefactor) TODO
-                # subband_bit_allocation[ch, :] = psycho.model1(wav_file.audio[ch].ordered(), params, scfindices) TODO
-                pass
+                scfindices[ch, :] = util.get_scale_factors(subband_samples[ch, :, :], self.__wav_file.table.scalefactor)
+                subband_bit_allocation[ch, :] = psycho.model1(self.__wav_file.audio[ch].ordered(), self.__wav_file,
+                                                              scfindices)
 
             subband_samples_quantized = np.zeros(subband_samples.shape, dtype='uint32')
             for ch in range(self.__wav_file.get_num_of_ch()):
@@ -55,10 +57,11 @@ class MP3Encoder:
                     scf = self.__wav_file.get_table().scalefactor[scfindices[ch, sb]]
                     ba = subband_bit_allocation[ch, sb]
                     for ind in range(tables.FRAMES_PER_BLOCK):
-                        # subband_samples_quantized[ch, sb, ind] = quantization.quantization(subband_samples[ch, sb, ind], scf, ba, QCa, QCb) TODO
+                        subband_samples_quantized[ch, sb, ind] = self.__quantization(subband_samples[ch, sb, ind], scf,
+                                                                                     ba, QCa, QCb)
                         pass
             # Forming output bitsream and appending it to the output file.
-            # bitstream_formatting(outmp3file, params, subband_bit_allocation, scfindices, subband_samples_quantized) TODO
+            util.bitstream_formatting(self.__wav_file, subband_bit_allocation, scfindices, subband_samples_quantized)
 
     # Computes the prototype filter used in subband coding. The filter is a 512-point lowpass FIR h[n] with bandwidth
     # pi/64 and stopband starting at pi/32
@@ -94,7 +97,7 @@ class MP3Encoder:
     # QCb:    the additive uniform quantization parameter
     # Returns the uniformly quantized sample.
     @staticmethod
-    def quantization(sample, sf, ba, QCa, QCb):
+    def __quantization(sample, sf, ba, QCa, QCb):
         power = math.pow(2, (ba - 1))
         scaled = sample / sf
         q = np.floor((QCa * scaled + QCb) * power)

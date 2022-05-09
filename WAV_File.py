@@ -163,3 +163,6 @@ class WAVFile:
 
     def get_table(self):
         return self.__table
+
+    def get_file_path(self):
+        return self.__file_path
