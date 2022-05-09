@@ -18,7 +18,11 @@ INF = 123456
 
 class WAVFile:
     # sample_rate, num_of_ch, bits_per_sample used for PCM
-    def __init__(self, file_path, sample_rate=0, num_of_ch=0, bits_per_sample=0):
+    def __init__(self, file_path, bitrate=320, sample_rate=0, num_of_ch=0, bits_per_sample=0):
+        self.__bitrate = bitrate
+        if self.__bitrate == 32 and self.__num_of_ch == 2:
+            sys.exit('Bitrate of 32Kbits/s is insufficient for encoding of stereo audio.')
+
         self.__file_path = file_path
         self.__file = open(self.__file_path, 'rb')
 
@@ -43,9 +47,6 @@ class WAVFile:
         self.__audio = []
         for ch in range(self.__num_of_ch):
             self.__audio.append(CircBuffer(FRAME_SIZE))
-
-    def get_params(self):
-        pass
 
     # Reads the header information to check if it is a valid file with PCM audio samples.
     def __read_header(self):
@@ -79,6 +80,9 @@ class WAVFile:
 
         idx += 2
         self.__sample_rate = struct.unpack('<I', buffer[idx:idx + 4])[0]  # bytes 25 - 28
+        if self.__sample_rate not in (32000, 44100, 48000):
+            sys.exit('Unsupported sampling frequency.')
+        self.__sample_rate_code = {44100: 0b00, 48000: 0b01, 32000: 0b10}.get(self.__sample_rate)
 
         idx += 4
         self.__byte_rate = struct.unpack('<I', buffer[idx:idx + 4])[0]  # bytes 29 - 32
@@ -102,6 +106,46 @@ class WAVFile:
         self.__num_of_samples = sub_chunk2_size * 8 / self.__bits_per_sample / self.__num_of_ch
 
         self.__file.seek(idx + 4)
+
+        self.__num_of_slots = 12 * self.__bitrate * 1000 // self.__sample_rate
+        self.__copyright = 0
+        self.__original = 0
+        self.__chmode = 0b11 if self.__num_of_ch == 1 else 0b10
+        self.__modext = 0b10
+        self.__sync_word = 0b11111111111
+        self.__mpeg_version = 0b11
+        self.__layer = 0b11
+        self.__crc = 0b1
+        self.__emphasis = 0b00
+        self.__pad_bit = 0
+        self.__rest = 0
+
+        self.__header = (self.__sync_word << 21 | self.__mpeg_version << 19 |
+                         self.__layer << 17 | self.__crc << 16 |
+                         self.__bitrate << 7 | self.__sample_rate_code << 10 |
+                         self.__pad_bit << 9 | self.__chmode << 6 |
+                         self.__modext << 4 | self.__copyright << 3 |
+                         self.__original << 2 | self.__emphasis)
+
+        # self.table = Tables(self.__sample_rate, self.__bitrate) TODO tables
+
+    # Update pad_bit in header for current frame.
+    def update_header(self):
+        self.__need_padding()
+        if self.__pad_bit:
+            self.__header |= 0x00000200
+        else:
+            self.__header &= 0xFFFFFDFF
+
+    # To ensure the constant bitrate, for fs=44100 padding is sometimes needed.
+    def __need_padding(self):
+        dif = (self.__bitrate * 1000 * 12) % self.__sample_rate
+        self.__rest -= dif
+        if self.__rest < 0:
+            self.__rest += self.__sample_rate
+            self.__pad_bit = 1
+        else:
+            self.__pad_bit = 0
 
 
 # Circular buffer used for audio input.
