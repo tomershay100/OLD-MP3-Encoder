@@ -9,7 +9,7 @@ class MP3Encoder:
         self.__wav_file = wav_file
 
     def encode(self):
-        baseband_filter = self.prototype_filter().astype('float32')
+        baseband_filter = self.__prototype_filter().astype('float32')
 
         subband_samples = np.zeros((self.__wav_file.get_num_of_ch(), tables.N_SUBBANDS, tables.FRAMES_PER_BLOCK),
                                    dtype='float32')
@@ -28,8 +28,8 @@ class MP3Encoder:
 
                 # Filtering = dot product with reversed buffer.
                 for ch in range(self.__wav_file.get_num_of_ch()):
-                    # subband_samples[ch, :, frm] = subband_filtering.subband_filtering(wav_file.audio[ch].reversed(), baseband_filter) TODO
-                    pass
+                    subband_samples[ch, :, frm] = self.__subband_filtering(self.__wav_file.audio[ch].reversed(),
+                                                                           baseband_filter)
 
             # Declaring arrays for keeping table indices of calculated scalefactors and bits allocated in subbands.
             # Number of bits allocated in subband is either 0 or in range [2,15].
@@ -61,7 +61,7 @@ class MP3Encoder:
     # Computes the prototype filter used in subband coding. The filter is a 512-point lowpass FIR h[n] with bandwidth
     # pi/64 and stopband starting at pi/32
     @staticmethod
-    def prototype_filter():
+    def __prototype_filter():
         lowpass_points = 512  # number of lowpass points
         sample_rate = np.pi  # setting sampling frequency
         pass_frequency = sample_rate / 128  # pass frequency
@@ -71,3 +71,16 @@ class MP3Encoder:
                               desired=[2, 0], fs=2 * sample_rate)  # filter
 
         return filter
+
+    # implementing the efficient version of the subband filter as specified by the MP3 standard
+    #  x:  a new 512-point data buffer, in time-reversed order [x[n],x[n-1],...,x[n-511]].
+    #  h:  The prototype filter of the filter bank
+    # Returns: 32 new output samples
+    @staticmethod
+    def __subband_filtering(x, h):
+        r = np.multiply(x, h)
+        q = np.arange(64)
+        c = np.sum((-1) ** np.arange(8)[:, np.newaxis] * r[q + 64 * np.arange(8)[:, np.newaxis]], axis=0)
+        s = np.sum(np.cos(np.pi / 64. * (2 * np.arange(32)[:, np.newaxis] + 1) * (np.arange(q.shape[0]) - 16)) * c,
+                   axis=1)
+        return s
