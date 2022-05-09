@@ -166,3 +166,12 @@ class WAVFile:
 
     def get_file_path(self):
         return self.__file_path
+
+    def get_num_of_slots(self):
+        return self.__num_of_slots
+
+    def get_pad_bit(self):
+        return self.__pad_bit
+
+    def get_header(self):
+        return self.__header

@@ -45,7 +45,8 @@ class MP3Encoder:
             # scaling is done later, its result is necessary for the psychoacoustic model and calculation of
             # sound pressure levels.
             for ch in range(self.__wav_file.get_num_of_ch()):
-                scfindices[ch, :] = util.get_scale_factors(subband_samples[ch, :, :], self.__wav_file.table.scalefactor)
+                scfindices[ch, :] = util.get_scale_factors(subband_samples[ch, :, :],
+                                                           self.__wav_file.get_table().scale_factor)
                 subband_bit_allocation[ch, :] = psycho.model1(self.__wav_file.audio[ch].ordered(), self.__wav_file,
                                                               scfindices)
 
@@ -54,7 +55,7 @@ class MP3Encoder:
                 for sb in range(tables.N_SUBBANDS):
                     QCa = self.__wav_file.get_table().qca[subband_bit_allocation[ch, sb] - 2]
                     QCb = self.__wav_file.get_table().qcb[subband_bit_allocation[ch, sb] - 2]
-                    scf = self.__wav_file.get_table().scalefactor[scfindices[ch, sb]]
+                    scf = self.__wav_file.get_table().scale_factor[scfindices[ch, sb]]
                     ba = subband_bit_allocation[ch, sb]
                     for ind in range(tables.FRAMES_PER_BLOCK):
                         subband_samples_quantized[ch, sb, ind] = self.__quantization(subband_samples[ch, sb, ind], scf,

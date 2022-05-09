@@ -72,6 +72,9 @@ class BitStream:
             data >>= 8
         return data_in_bytes
 
+    def get_data(self):
+        return self.__data
+
 
 def get_scale_factors(sbsamples, sftable):
     return None

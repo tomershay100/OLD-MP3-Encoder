@@ -5,9 +5,17 @@ N_SUBBANDS = 32
 SHIFT_SIZE = 32
 SLOT_SIZE = 32
 FRAMES_PER_BLOCK = 12
+SUB_SIZE = FFT_SIZE / 2 / N_SUBBANDS
 
 EPS = 1e-6
 INF = 123456
+
+DBMIN = -200
+
+UNSET = 0
+TONE = 1  # Flags used to denote tonal and noise components
+NOISE = 2
+IGNORE = 3
 
 D1a = [[1, 1, 0.617, 33.44],
        [2, 2, 1.232, 19.20],
@@ -481,11 +489,11 @@ class Tables:
             frequency_band = np.array(D1a, dtype='float32')
             critical_band = np.array(D2a, dtype='uint16')
         elif sample_rate == 44100:
-            frequency_band = np.array(D1b, dtype='float32')
-            critical_band = np.array(D2b, dtype='float32')
+               frequency_band = np.array(D1b, dtype='float32')
+               critical_band = np.array(D2b, dtype='uint16')
         else:  # sample_rate == 48000:
-            frequency_band = np.array(D1c, dtype='float32')
-            critical_band = np.array(D2c, dtype='float32')
+               frequency_band = np.array(D1c, dtype='float32')
+               critical_band = np.array(D2c, dtype='uint16')
 
         self.cbnum = critical_band[-1, 0] + 1
         self.cbound = critical_band[:, 1]
