@@ -5,15 +5,9 @@ import sys
 
 import numpy as np
 
-FRAME_SIZE = 512
-FFT_SIZE = 512
-N_SUBBANDS = 32
-SHIFT_SIZE = 32
-SLOT_SIZE = 32
-FRAMES_PER_BLOCK = 12
+from tables import Tables
 
-EPS = 1e-6
-INF = 123456
+FRAME_SIZE = 512
 
 
 class WAVFile:
@@ -127,7 +121,7 @@ class WAVFile:
                          self.__modext << 4 | self.__copyright << 3 |
                          self.__original << 2 | self.__emphasis)
 
-        # self.table = Tables(self.__sample_rate, self.__bitrate) TODO tables
+        self.table = Tables(self.__sample_rate, self.__bitrate)
 
     # Update pad_bit in header for current frame.
     def update_header(self):
