@@ -172,4 +172,18 @@ class CircBuffer:
         self.samples = np.zeros(size, dtype=datatype)
 
     def insert(self, frame):
-        pass
+        length = len(frame)
+        if self.pos + length <= self.size:
+            self.samples[self.pos:self.pos + length] = frame
+        else:
+            overhead = length - (self.size - self.pos)
+            self.samples[self.pos:self.size] = frame[:-overhead]
+            self.samples[0:overhead] = frame[-overhead:]
+        self.pos += length
+        self.pos %= self.size
+
+    def ordered(self):
+        return np.concatenate((self.samples[self.pos:], self.samples[:self.pos]))
+
+    def reversed(self):
+        return np.concatenate((self.samples[self.pos - 1::-1], self.samples[:self.pos - 1:-1]))
