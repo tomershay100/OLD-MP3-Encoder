@@ -14,5 +14,5 @@ if __name__ == "__main__":
         sys.exit('File not found.')
 
     wav_file = WAVFile(file_path)
-    params = wav_file.get_params()
+    # params = wav_file.get_params()
     # main(inwavfile, outmp3file, bitrate)
