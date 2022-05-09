@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from scipy import signal
 
@@ -75,7 +77,7 @@ class MP3Encoder:
     # implementing the efficient version of the subband filter as specified by the MP3 standard
     #  x:  a new 512-point data buffer, in time-reversed order [x[n],x[n-1],...,x[n-511]].
     #  h:  The prototype filter of the filter bank
-    # Returns: 32 new output samples
+    # Returns 32 new output samples
     @staticmethod
     def __subband_filtering(x, h):
         r = np.multiply(x, h)
@@ -84,3 +86,16 @@ class MP3Encoder:
         s = np.sum(np.cos(np.pi / 64. * (2 * np.arange(32)[:, np.newaxis] + 1) * (np.arange(q.shape[0]) - 16)) * c,
                    axis=1)
         return s
+
+    # sample: the sample to quantize
+    # sf:     the scale factor
+    # ba:     the bit allocation
+    # QCa:    the multiplicative uniform quantization parameter
+    # QCb:    the additive uniform quantization parameter
+    # Returns the uniformly quantized sample.
+    @staticmethod
+    def quantization(sample, sf, ba, QCa, QCb):
+        power = math.pow(2, (ba - 1))
+        scaled = sample / sf
+        q = np.floor((QCa * scaled + QCb) * power)
+        return q
