@@ -38,9 +38,9 @@ class WAVFile:
         else:
             self.__datatype = 'int32'
         self.__num_of_processed_samples = 0
-        self.__audio = []
+        self.audio = []
         for ch in range(self.__num_of_ch):
-            self.__audio.append(CircBuffer(FRAME_SIZE))
+            self.audio.append(CircBuffer(FRAME_SIZE))
 
     # Reads the header information to check if it is a valid file with PCM audio samples.
     def __read_header(self):
@@ -121,7 +121,7 @@ class WAVFile:
                          self.__modext << 4 | self.__copyright << 3 |
                          self.__original << 2 | self.__emphasis)
 
-        self.table = Tables(self.__sample_rate, self.__bitrate)
+        self.__table = Tables(self.__sample_rate, self.__bitrate)
 
     # Update pad_bit in header for current frame.
     def update_header(self):
@@ -141,6 +141,28 @@ class WAVFile:
         else:
             self.__pad_bit = 0
 
+    # Read number of samples from WAVE file and insert it in circular buffer.
+    def read_samples(self, num_of_samples):
+        read_size = self.__num_of_ch * num_of_samples
+        frame = np.fromfile(self.__file, self.__datatype, read_size)
+        frame.shape = (-1, self.__num_of_ch)
+        for ch in range(self.__num_of_ch):
+            self.audio[ch].insert(frame[:, ch].astype('float32') / (1 << self.__bits_per_sample - 1))
+        self.__num_of_processed_samples += frame.shape[0]
+        return frame.shape[0]
+
+    def get_num_of_ch(self):
+        return self.__num_of_ch
+
+    def get_num_of_processed_samples(self):
+        return self.__num_of_processed_samples
+
+    def get_num_of_samples(self):
+        return self.__num_of_samples
+
+    def get_table(self):
+        return self.__table
+
 
 # Circular buffer used for audio input.
 class CircBuffer:
@@ -148,3 +170,6 @@ class CircBuffer:
         self.size = size
         self.pos = 0
         self.samples = np.zeros(size, dtype=datatype)
+
+    def insert(self, frame):
+        pass
