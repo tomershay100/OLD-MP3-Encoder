@@ -1,8 +1,7 @@
 # Circular buffer used for audio input.
 import numpy as np
 
-NUM_OF_SUBBANDS = 32
-FRAMES_PER_BLOCK = 12
+from tables import N_SUBBANDS, FRAMES_PER_BLOCK
 
 
 class CircBuffer:
@@ -85,7 +84,7 @@ class BitStream:
 def get_scale_factors(subband_samples, scale_factor_table):
     scale_factor_indexes = np.zeros(subband_samples.shape[0:-1], dtype='uint8')
     subbands_max_vals = np.max(np.absolute(subband_samples), axis=1)
-    for subband in range(NUM_OF_SUBBANDS):
+    for subband in range(N_SUBBANDS):
         i = 0
         while scale_factor_table[i + 1] > subbands_max_vals[subband]:
             i += 1
@@ -100,17 +99,17 @@ def bitstream_formatting(wav_file, alloc, scale_factor, sample):
     buffer.insert(wav_file.header, 32)
     wav_file.updateheader()
 
-    for subband in range(NUM_OF_SUBBANDS):
+    for subband in range(N_SUBBANDS):
         for channel in range(wav_file.num_of_ch):
             buffer.insert(np.max((alloc[channel][subband] - 1, 0)), 4)
 
-    for subband in range(NUM_OF_SUBBANDS):
+    for subband in range(N_SUBBANDS):
         for channel in range(wav_file.num_of_ch):
             if alloc[channel][subband] != 0:
                 buffer.insert(scale_factor[channel][subband], 6)
 
     for s in range(FRAMES_PER_BLOCK):
-        for subband in range(NUM_OF_SUBBANDS):
+        for subband in range(N_SUBBANDS):
             for channel in range(wav_file.num_of_ch):
                 if alloc[channel][subband] != 0:
                     buffer.insert(sample[channel][subband][s], alloc[channel][subband], True)
