@@ -152,26 +152,34 @@ class WAVFile:
         self.__num_of_processed_samples += frame.shape[0]
         return frame.shape[0]
 
-    def get_num_of_ch(self):
+    @property
+    def num_of_ch(self):
         return self.__num_of_ch
 
-    def get_num_of_processed_samples(self):
+    @property
+    def num_of_processed_samples(self):
         return self.__num_of_processed_samples
 
-    def get_num_of_samples(self):
+    @property
+    def num_of_samples(self):
         return self.__num_of_samples
 
-    def get_table(self):
+    @property
+    def table(self):
         return self.__table
 
-    def get_file_path(self):
+    @property
+    def file_path(self):
         return self.__file_path
 
-    def get_num_of_slots(self):
+    @property
+    def num_of_slots(self):
         return self.__num_of_slots
 
-    def get_pad_bit(self):
+    @property
+    def pad_bit(self):
         return self.__pad_bit
 
-    def get_header(self):
+    @property
+    def header(self):
         return self.__header

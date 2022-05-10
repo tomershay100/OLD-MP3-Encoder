@@ -1,6 +1,9 @@
 # Circular buffer used for audio input.
 import numpy as np
 
+NUM_OF_SUBBANDS = 32
+FRAMES_PER_BLOCK = 12
+
 
 class CircBuffer:
     def __init__(self, size, datatype='float32'):
@@ -72,13 +75,46 @@ class BitStream:
             data >>= 8
         return data_in_bytes
 
-    def get_data(self):
+    @property
+    def data(self):
         return self.__data
 
 
-def get_scale_factors(sbsamples, sftable):
-    return None
+# Calculate scale factors for subbands. Scale factor is equal to the smallest number in the table
+# greater than all the subband samples in a particular subband. Scalefactor table indices are returned.
+def get_scale_factors(subband_samples, scale_factor_table):
+    scale_factor_indexes = np.zeros(subband_samples.shape[0:-1], dtype='uint8')
+    subbands_max_vals = np.max(np.absolute(subband_samples), axis=1)
+    for subband in range(NUM_OF_SUBBANDS):
+        i = 0
+        while scale_factor_table[i + 1] > subbands_max_vals[subband]:
+            i += 1
+        scale_factor_indexes[subband] = i
+    return scale_factor_indexes
 
 
-def bitstream_formatting(wav_file, allocation, scalefactor, sample):
-    return None
+# Form a MPEG-1 Layer 1 bitstream and append it to output file.
+def bitstream_formatting(wav_file, alloc, scale_factor, sample):
+    buffer = BitStream((wav_file.num_of_slots + wav_file.padbit) * 4)
+
+    buffer.insert(wav_file.header, 32)
+    wav_file.updateheader()
+
+    for subband in range(NUM_OF_SUBBANDS):
+        for channel in range(wav_file.num_of_ch):
+            buffer.insert(np.max((alloc[channel][subband] - 1, 0)), 4)
+
+    for subband in range(NUM_OF_SUBBANDS):
+        for channel in range(wav_file.num_of_ch):
+            if alloc[channel][subband] != 0:
+                buffer.insert(scale_factor[channel][subband], 6)
+
+    for s in range(FRAMES_PER_BLOCK):
+        for subband in range(NUM_OF_SUBBANDS):
+            for channel in range(wav_file.num_of_ch):
+                if alloc[channel][subband] != 0:
+                    buffer.insert(sample[channel][subband][s], alloc[channel][subband], True)
+
+    fp = open(wav_file.file_path, 'a+')
+    buffer.data.tofile(fp)
+    fp.close()
